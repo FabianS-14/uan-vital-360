@@ -72,7 +72,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--primary);outlin
 .q-title{font-weight:600}
 .field{display:flex;flex-direction:column;gap:10px}
 .field label,.field .lbl{font-weight:700}
-input[type=text]{min-height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:0 14px;font:inherit}
+input[type=text],input[type=email],input[type=password]{min-height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:0 14px;font:inherit}
 .consent{display:grid;grid-template-columns:26px 1fr;gap:12px;align-items:start;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px;font-size:.9rem;line-height:1.45}
 .consent[aria-pressed="true"]{border-color:var(--primary)}
 .consent .box{width:24px;height:24px;border-radius:7px;border:2px solid var(--primary);display:grid;place-items:center;font-weight:800;color:var(--primary-ink)}
@@ -168,7 +168,7 @@ const KEY='uan-vital-360-v1';
 /* Pega aquí la URL de tu aplicación web de Google Apps Script (termina en /exec) */
 const SHEETS_URL='https://script.google.com/macros/s/AKfycbzj4awZ8Ri7G8XM9QwsDX-yDpcv3LSy4ZDM1VEmePHzkgqRcw6xPY1E81OuwRCy7ykW/exec';
 const sheetsOn=()=>/^https:\/\/script\.google\.com\/.+\/exec/.test(SHEETS_URL);
-const blank=()=>({profile:null,assessments:[],checkins:[],challenge:null,uid:null,consent:null,queue:[],lastSync:null});
+const blank=()=>({profile:null,assessments:[],checkins:[],challenge:null,uid:null,consent:null,queue:[],lastSync:null,email:null,pinHash:null,updated:0});
 let S=load();
 function load(){try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);return Object.assign(blank(),o);}}catch(e){}return blank();}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
@@ -258,7 +258,7 @@ function ensureChallenge(){const ws=weekStart();if(!S.challenge||S.challenge.wee
 const nowStr=()=>{const d=new Date();return ymd(d)+' '+pad(d.getHours())+':'+pad(d.getMinutes());};
 function userRow(){
  const p=S.profile||{},a=lastA(),m=monthScores(),r={};
- r['ID usuario']=S.uid; r['Fecha registro']=S.consent||''; r['Última actualización']=nowStr(); r['Autoriza tratamiento de datos']='Sí';
+ r['Correo']=S.email; r['Fecha registro']=S.consent||''; r['Última actualización']=nowStr(); r['Autoriza tratamiento de datos']='Sí';
  PROFILE.forEach(x=>r[x.l]=p[x.k]||'');
  r['Fecha valoración']=a?a.date:'';
  AREAS.forEach(ar=>QL[ar.k].forEach((l,i)=>{const j=a&&a.answers?a.answers[ar.k+i]:null;r[`${ar.s} ${i+1}: ${l}`]=j!=null?FREQ[j]:'';}));
@@ -271,23 +271,59 @@ function userRow(){
  r['Días reto completados']=S.challenge?S.challenge.done.length:'';
  return r;}
 function ciRow(c){
- const r={'ID registro':S.uid+'-'+c.date,'ID usuario':S.uid,'Fecha':c.date,'Hora de envío':nowStr(),'Área de trabajo':(S.profile||{}).area||''};
+ const r={'ID registro':S.email+'|'+c.date,'Correo':S.email,'Fecha':c.date,'Hora de envío':nowStr(),'Área de trabajo':(S.profile||{}).area||''};
  CI.forEach(q=>{const j=PTS.indexOf(c.v[q.k]);r[q.n+' (respuesta)']=j>-1?q.o[j]:'';r[q.n+' (%)']=c.v[q.k];});
  r['Promedio check-in (%)']=Math.round(avg(CI.map(q=>c.v[q.k])));return r;}
+/* ---------- Cuenta (correo + PIN) y sincronización ---------- */
+async function api(body){const r=await fetch(SHEETS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});return r.json();}
+async function hashPin(email,pin){const b=new TextEncoder().encode('uanvital360|'+email+'|'+pin);const h=await crypto.subtle.digest('SHA-256',b);return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+const stateOut=()=>({profile:S.profile,assessments:S.assessments,checkins:S.checkins,challenge:S.challenge,consent:S.consent,updated:S.updated});
+let syncErr='';
 function sync(ci){
- if(!S.uid)return;
+ if(!S.email)return;
+ S.updated=Date.now();
  S.queue=(S.queue||[]).filter(it=>it.checkin);
- const it={user:userRow()}; if(ci)it.checkin=ciRow(ci);
+ const it={action:'save',email:S.email,pin:S.pinHash,user:userRow()}; if(ci)it.checkin=ciRow(ci);
  S.queue.push(it); save(); flush();}
 let flushing=false;
 async function flush(){
- if(flushing||!S.queue||!S.queue.length||!sheetsOn())return; flushing=true;
- try{while(S.queue.length){await fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(S.queue[0])});S.queue.shift();S.lastSync=nowStr();save();}}catch(e){}
+ if(flushing||!S.queue||!S.queue.length||!sheetsOn()||!S.email)return; flushing=true;
+ try{while(S.queue.length){const r=await api({...S.queue[0],email:S.email,pin:S.pinHash,state:stateOut()});
+   if(!r||!r.ok){syncErr=(r&&r.error)||'error';break;}
+   S.queue.shift();S.lastSync=nowStr();syncErr='';save();}}catch(e){syncErr='red';}
  flushing=false; if(!flow&&tab==='perfil')render();}
+async function refresh(){
+ if(!sheetsOn()||!S.email||(S.queue&&S.queue.length))return;
+ try{const r=await api({action:'login',email:S.email,pin:S.pinHash});
+  if(r.ok&&r.state&&(r.state.updated||0)>(S.updated||0)){S=Object.assign(blank(),r.state,{email:S.email,pinHash:S.pinHash});save();render();}
+  else if(!r.ok&&(r.error==='pin'||r.error==='bloqueada')){S=blank();save();flow='login';lErr='Tu sesión se cerró porque el PIN de la cuenta cambió. Ingresa de nuevo.';render(true);}
+ }catch(e){}}
+function goAfterLogin(){
+ if(!S.profile){pDraft={};afterProfile='valoracion';flow='perfil';}
+ else if(!lastA()){vStep=0;vDraft={};afterProfile='valoracion';flow='valoracion';}
+ else{flow=null;tab='inicio';}}
+function startSession(email,h,st){
+ S=Object.assign(blank(),st||{},{email,pinHash:h}); save();
+ lDraft={email:'',pin:'',pin2:'',nuevo:false}; goAfterLogin(); render(true);}
+async function doLogin(){
+ const email=(lDraft.email||'').trim().toLowerCase(), pin=lDraft.pin||'';
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){lErr='Escribe un correo válido, por ejemplo nombre@correo.com.';return render();}
+ if(!/^\d{4}$/.test(pin)){lErr='El PIN debe tener 4 números.';return render();}
+ if(lDraft.nuevo&&lDraft.pin2!==pin){lErr='Los dos PIN no coinciden. Escríbelos de nuevo.';return render();}
+ const h=await hashPin(email,pin);
+ if(!sheetsOn()){startSession(email,h,null);return;}
+ lBusy=true;lErr='';render();
+ try{const r=await api({action:'login',email,pin:h});
+  lBusy=false;
+  if(r.ok&&r.nuevo&&!lDraft.nuevo){lDraft.nuevo=true;lDraft.email=email;return render();}
+  if(r.ok){startSession(email,h,r.state||null);return;}
+  lErr=r.error==='pin'?'El PIN no coincide con este correo. Te quedan '+(r.restantes??'pocos')+' intentos.':r.error==='bloqueada'?'Esta cuenta se bloqueó por varios intentos fallidos. Pide al administrador del programa que la desbloquee.':'No se pudo ingresar. Intenta de nuevo.';
+ }catch(e){lBusy=false;lErr='No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.';}
+ render();}
 window.addEventListener('online',flush);
 
 /* ---------- Estado de la interfaz ---------- */
-let flow='splash', tab='inicio', pDraft={}, pErr='', vStep=0, vDraft={}, ciDraft={}, ciAgain=false, metric='todas', recArea=null, confirmReset=false, afterProfile='valoracion';
+let flow='splash', tab='inicio', pDraft={}, pErr='', vStep=0, vDraft={}, ciDraft={}, ciAgain=false, metric='todas', recArea=null, confirmReset=false, afterProfile='valoracion', lDraft={email:'',pin:'',pin2:'',nuevo:false}, lErr='', lBusy=false;
 const $=s=>document.querySelector(s);
 let charts=[];
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -325,11 +361,22 @@ const FLOW={
   <h1>UAN VITAL 360°<small>BIENESTAR EN LA JORNADA</small></h1>
   <p class="tagline">Tu bienestar también hace parte de tu jornada.</p>
   <button class="btn big" data-act="start" style="max-width:320px">Comenzar</button>
-  <p class="muted" style="font-size:.82rem;max-width:32ch">Tus respuestas se registran de forma anónima.</p></section>`,
+  <p class="muted" style="font-size:.82rem;max-width:32ch">Ingresa con tu correo y retoma tu seguimiento desde cualquier dispositivo.</p></section>`,
 
+ login:()=>`<div class="top">${brand()}</div>
+ <div class="stack"><div class="eyebrow">Tu cuenta</div><h1>${lDraft.nuevo?'Crea tu cuenta':'Ingresa con tu correo'}</h1><p class="muted">${lDraft.nuevo?'Es la primera vez que usas este correo. Crea un PIN de 4 números y guárdalo: lo necesitarás para entrar desde otros dispositivos.':'Usa el mismo correo y PIN en cualquier celular o computador para ver todo tu seguimiento.'}</p></div>
+ <form class="card" id="loginForm" novalidate>
+  <div class="field"><label for="lemail">Correo electrónico</label><input id="lemail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" value="${esc(lDraft.email)}" placeholder="nombre@correo.com" ${lDraft.nuevo?'readonly':''}></div>
+  <div class="field"><label for="lpin">${lDraft.nuevo?'Crea tu PIN de 4 números':'PIN de 4 números'}</label><input id="lpin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="${lDraft.nuevo?'new-password':'current-password'}" value="${esc(lDraft.pin)}" placeholder="••••"></div>
+  ${lDraft.nuevo?`<div class="field"><label for="lpin2">Confirma tu PIN</label><input id="lpin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" value="${esc(lDraft.pin2)}" placeholder="••••"></div>`:''}
+  ${lErr?`<p class="err" role="alert">${lErr}</p>`:''}
+  <button class="btn big" type="submit" ${lBusy?'disabled':''}>${lBusy?'Verificando…':lDraft.nuevo?'Crear mi cuenta':'Ingresar'}</button>
+  ${lDraft.nuevo?`<button class="link" type="button" data-act="lback">Usar otro correo</button>`:''}
+ </form>
+ <p class="muted" style="font-size:.85rem;text-align:center">¿Olvidaste tu PIN? Pide al administrador del programa que lo restablezca.</p>`,
  perfil:()=>{const done=PROFILE.filter(p=>pDraft[p.k]).length;return `<div class="top">${brand()}<span class="muted" style="font-size:.85rem">${done}/${PROFILE.length}</span></div>
  <div class="stack"><div class="eyebrow">Paso 1 de 2</div><h1>Conozcamos tus hábitos</h1><p class="muted">Elige la opción que mejor te describe. Te toma menos de un minuto.</p></div>
- ${S.consent?'':`<button class="consent" data-act="consent" aria-pressed="${!!pDraft.consent}"><span class="box" aria-hidden="true">${pDraft.consent?'✓':''}</span><span>Autorizo el tratamiento de mis datos de forma anónima, con fines de bienestar e investigación, según la Ley 1581 de 2012. Mis respuestas se identifican solo con un código, no con mi nombre.</span></button>`}
+ ${S.consent?'':`<button class="consent" data-act="consent" aria-pressed="${!!pDraft.consent}"><span class="box" aria-hidden="true">${pDraft.consent?'✓':''}</span><span>Autorizo el tratamiento de mis datos personales (correo y respuestas) con fines de bienestar e investigación, según la Ley 1581 de 2012.</span></button>`}
  <div class="field"><label for="nombre">¿Cómo te llamamos? <span class="muted" style="font-weight:500">(opcional)</span></label><input id="nombre" type="text" maxlength="30" autocomplete="given-name" value="${esc(pDraft.nombre||'')}" placeholder="Tu nombre"></div>
  ${PROFILE.map(p=>`<section class="card"><div class="lbl" style="font-weight:700">${p.l}</div><div class="chips">${p.o.map(o=>`<button class="chip" data-act="pick" data-g="${p.k}" data-v="${esc(o)}" aria-pressed="${pDraft[p.k]===o}">${o}</button>`).join('')}</div></section>`).join('')}
  ${pErr?`<p class="err">${pErr}</p>`:''}
@@ -404,9 +451,9 @@ const TABS={
  <h1>${p.nombre?esc(p.nombre):'Mi perfil'}</h1>
  <section class="card"><h3>Mis hábitos</h3><dl class="kv">${PROFILE.map(x=>`<dt>${x.l}</dt><dd>${esc(p[x.k]||'—')}</dd>`).join('')}</dl><button class="btn ghost" data-act="pedit">Editar mis hábitos</button></section>
  <section class="card"><h3>Mis registros</h3><dl class="kv"><dt>Valoraciones</dt><dd>${S.assessments.length}</dd><dt>Check-ins</dt><dd>${S.checkins.length}</dd></dl>
- <dl class="kv"><dt>Tu código</dt><dd>${S.uid||'—'}</dd><dt>Envío a la base de datos</dt><dd>${!sheetsOn()?'Sin conectar':S.queue&&S.queue.length?S.queue.length+' pendiente(s)':'Al día ✓'}</dd></dl>
- <p class="muted" style="font-size:.9rem">Tus respuestas se guardan en este dispositivo y se envían a la base de datos del programa solo con tu código, sin tu nombre. Borrar aquí no elimina lo ya enviado; para eso, comparte tu código con el administrador.</p>
- ${confirmReset?`<p class="err">Se borrarán tu perfil, valoraciones, check-ins y retos. Esta acción no se puede deshacer.</p><div class="row"><button class="btn ghost" data-act="rcancel">Cancelar</button><button class="btn" data-act="rconfirm" style="background:var(--accent);color:var(--accent-ink)">Borrar todo</button></div>`:`<button class="btn ghost" data-act="reset">Borrar mis datos</button>`}</section>
+ <dl class="kv"><dt>Tu cuenta</dt><dd style="word-break:break-all">${esc(S.email||'—')}</dd><dt>Guardado en tu cuenta</dt><dd>${!sheetsOn()?'Modo demo (sin conexión)':S.queue&&S.queue.length?(syncErr?'⚠️ ':'')+S.queue.length+' pendiente(s)':'Al día ✓'}</dd></dl>
+ <p class="muted" style="font-size:.9rem">Tu seguimiento queda guardado en tu cuenta. Entra con el mismo correo y PIN desde otro dispositivo y verás todo tu historial.</p>
+ ${confirmReset?`<p class="err">${S.queue&&S.queue.length?'Tienes '+S.queue.length+' registro(s) sin enviar. Si cierras sesión ahora, se perderán. Conéctate a internet antes de salir.':'Se cerrará tu sesión en este dispositivo. Tus datos quedan guardados en tu cuenta.'}</p><div class="row"><button class="btn ghost" data-act="rcancel">Cancelar</button><button class="btn" data-act="rconfirm" style="background:var(--accent);color:var(--accent-ink)">Cerrar sesión</button></div>`:`<button class="btn ghost" data-act="reset">Cerrar sesión</button>`}</section>
  <button class="link" data-act="splash" style="align-self:center">Ver pantalla de inicio</button>`;}
 };
 
@@ -442,16 +489,21 @@ function render(top){
 }
 function toast(m){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2400);}
 
-document.addEventListener('input',e=>{if(e.target.id==='nombre')pDraft.nombre=e.target.value.trim();});
+document.addEventListener('input',e=>{const id=e.target.id,v=e.target.value;
+ if(id==='nombre')pDraft.nombre=v.trim();
+ if(id==='lemail')lDraft.email=v;
+ if(id==='lpin'||id==='lpin2'){const d=v.replace(/\D/g,'').slice(0,4);if(d!==v)e.target.value=d;lDraft[id==='lpin'?'pin':'pin2']=d;}});
+document.addEventListener('submit',e=>{if(e.target.id==='loginForm'){e.preventDefault();if(!lBusy)doLogin();}});
 document.addEventListener('click',e=>{
  const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act,g=b.dataset.g,val=b.dataset.v;
  switch(a){
-  case 'start': if(!S.profile){pDraft={};afterProfile='valoracion';flow='perfil';} else if(!lastA()){vStep=0;vDraft={};afterProfile='valoracion';flow='valoracion';} else {flow=null;tab='inicio';} render(true);break;
+  case 'start': if(!S.email){lErr='';flow='login';} else goAfterLogin(); render(true); if(S.email)refresh(); break;
+  case 'lback': lDraft={email:'',pin:'',pin2:'',nuevo:false};lErr='';render();break;
   case 'splash': flow='splash';render(true);break;
   case 'pick': pDraft[g]=val;pErr='';render();break;
   case 'consent': pDraft.consent=!pDraft.consent;pErr='';render();break;
   case 'pnext': {const miss=PROFILE.filter(p=>!pDraft[p.k]).map(p=>p.l.toLowerCase());if(!S.consent&&!pDraft.consent)miss.unshift('la autorización de datos');if(miss.length){pErr='Falta: '+miss.join(', ')+'.';render();return;}
-   if(!S.consent)S.consent=nowStr();if(!S.uid)S.uid='UAN-'+Date.now().toString(36).toUpperCase().slice(-4)+Math.random().toString(36).slice(2,6).toUpperCase();
+   if(!S.consent)S.consent=nowStr();
    const pd={...pDraft};delete pd.consent;S.profile=pd;save();sync();if(afterProfile==='valoracion'){vStep=0;vDraft={};flow='valoracion';}else{flow=null;tab='perfil';toast('Perfil actualizado');}render(true);break;}
   case 'ans': vDraft[g]=+val;render();break;
   case 'vprev': vStep--;render(true);break;
@@ -471,13 +523,14 @@ document.addEventListener('click',e=>{
   case 'pedit': pDraft={...S.profile};pErr='';afterProfile='edit';flow='perfil';render(true);break;
   case 'reset': confirmReset=true;render();break;
   case 'rcancel': confirmReset=false;render();break;
-  case 'rconfirm': S=blank();save();try{localStorage.removeItem(KEY);}catch(x){}confirmReset=false;flow='splash';tab='inicio';render(true);break;
+  case 'rconfirm': S=blank();save();try{localStorage.removeItem(KEY);}catch(x){}confirmReset=false;lDraft={email:'',pin:'',pin2:'',nuevo:false};lErr='';flow='login';tab='inicio';render(true);break;
  }
 });
 // Volver a dibujar si cambia el tema
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>render());}catch(e){}
 new MutationObserver(()=>render()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-render();flush();
+if(S.uid&&!S.email){S=blank();save();}
+render();flush().then(refresh);
 </script>
 </body>
 </html>

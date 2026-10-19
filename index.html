@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1E40C8">
+<meta name="description" content="UAN Vital 360°: tu bienestar también hace parte de tu jornada.">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>UAN Vital 360°</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* Layout: app de una columna (máx 480px) con navegación inferior fija; tarjetas solo donde hay una acción o un resultado */
+:root{
+  --bg:#EEF2FB; --surface:#FFFFFF; --sunk:#E2E8F7; --ink:#0F1B45; --muted:#55618A; --line:#D3DBF0;
+  --primary:#1E40C8; --primary-ink:#FFFFFF; --primary-soft:rgba(30,64,200,.15); --accent:#F5C400; --accent-ink:#1A1500;
+  --c-mental:#7B4FD6; --c-fisico:#E0702F; --c-habitos:#2E9A63; --c-descanso:#1E40C8; --c-agua:#17A2B6;
+  --ok:#2E9A63; --mid:#2F6FE0; --low:#C99A00;
+  --ok-bg:#E1F3E9; --mid-bg:#E3ECFD; --low-bg:#FDF4D2;
+  --f-display:"Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r:18px; --shadow:0 1px 2px rgba(18,48,46,.06), 0 6px 20px rgba(18,48,46,.06);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0A1030; --surface:#121A42; --sunk:#1A2452; --ink:#E8ECFA; --muted:#9AA6D0; --line:#26315F;
+  --primary:#6E8BFF; --primary-ink:#0A1030; --primary-soft:rgba(110,139,255,.22); --accent:#FFD23F; --accent-ink:#1A1500;
+  --c-mental:#A98BF0; --c-fisico:#F2955C; --c-habitos:#5CC98E; --c-descanso:#6E8BFF; --c-agua:#4DCFE0;
+  --ok:#5CC98E; --mid:#7FA6F5; --low:#FFD23F;
+  --ok-bg:#163327; --mid-bg:#18264F; --low-bg:#3A3015;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0A1030; --surface:#121A42; --sunk:#1A2452; --ink:#E8ECFA; --muted:#9AA6D0; --line:#26315F;
+  --primary:#6E8BFF; --primary-ink:#0A1030; --primary-soft:rgba(110,139,255,.22); --accent:#FFD23F; --accent-ink:#1A1500;
+  --c-mental:#A98BF0; --c-fisico:#F2955C; --c-habitos:#5CC98E; --c-descanso:#6E8BFF; --c-agua:#4DCFE0;
+  --ok:#5CC98E; --mid:#7FA6F5; --low:#FFD23F;
+  --ok-bg:#163327; --mid-bg:#18264F; --low-bg:#3A3015;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark }
+
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+h1,h2,h3{font-family:var(--f-display);line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:1.9rem;font-weight:800} h2{font-size:1.4rem;font-weight:800} h3{font-size:1.08rem;font-weight:600}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.app{max-width:480px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:20px 110px;display:flex;flex-direction:column;gap:20px}
+.app.flow{padding-bottom:40px}
+.muted{color:var(--muted)}
+.eyebrow{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary)}
+.splash h1 small::after{content:"";display:block;width:48px;height:4px;border-radius:4px;background:var(--accent);margin:12px auto 0}
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:14px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 22px;border-radius:999px;background:var(--primary);color:var(--primary-ink);font-weight:700;font-size:1rem;width:100%;transition:transform .15s}
+.btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.big{min-height:60px;font-size:1.08rem}
+.btn.ghost{background:var(--sunk);color:var(--ink)}
+.btn.small{min-height:40px;width:auto;padding:0 16px;font-size:.92rem}
+.link{color:var(--primary);font-weight:700;padding:6px 0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:8px 16px;border-radius:14px;background:var(--surface);border:1.5px solid var(--line);font-weight:600;font-size:.95rem;text-align:left}
+.chip[aria-pressed="true"]{background:var(--primary-soft);border-color:var(--primary);color:var(--ink)}
+.chip.sm{min-height:36px;padding:6px 12px;font-size:.85rem;border-radius:999px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opts .chip{text-align:center;font-size:.9rem;padding:8px 6px}
+.q{display:flex;flex-direction:column;gap:10px;padding-block:6px}
+.q + .q{border-top:1px solid var(--line);padding-top:16px}
+.q-title{font-weight:600}
+.field{display:flex;flex-direction:column;gap:10px}
+.field label,.field .lbl{font-weight:700}
+input[type=text]{min-height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:0 14px;font:inherit}
+.consent{display:grid;grid-template-columns:26px 1fr;gap:12px;align-items:start;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:14px;font-size:.9rem;line-height:1.45}
+.consent[aria-pressed="true"]{border-color:var(--primary)}
+.consent .box{width:24px;height:24px;border-radius:7px;border:2px solid var(--primary);display:grid;place-items:center;font-weight:800;color:var(--primary-ink)}
+.consent[aria-pressed="true"] .box{background:var(--primary)}
+.err{color:var(--low);font-weight:600;font-size:.92rem;background:var(--low-bg);padding:10px 14px;border-radius:12px}
+.progress{height:10px;border-radius:999px;background:var(--sunk);overflow:hidden}
+.progress > i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .4s}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.steps span{height:6px;border-radius:999px;background:var(--sunk)}
+.steps span.on{background:var(--primary)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:800;font-size:1rem}
+.brand svg{width:30px;height:30px}
+
+/* Splash */
+.splash{min-height:calc(100dvh - 60px);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:26px;text-align:center;position:relative}
+.splash .art{position:relative;width:230px;height:230px;max-width:100%}
+.splash .art svg.logo{width:100%;height:100%}
+.float{position:absolute;width:42px;height:42px;border-radius:50%;background:var(--surface);box-shadow:var(--shadow);display:grid;place-items:center}
+.float svg{width:22px;height:22px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.f1{top:4px;left:0}.f2{top:20px;right:-6px}.f3{bottom:18px;left:-8px}.f4{bottom:0;right:6px}
+@media (prefers-reduced-motion:no-preference){.float{animation:bob 5s ease-in-out infinite}.f2{animation-delay:-1.2s}.f3{animation-delay:-2.4s}.f4{animation-delay:-3.6s}}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.splash h1{font-size:2.3rem}
+.splash h1 small{display:block;font-size:.95rem;font-weight:600;color:var(--muted);letter-spacing:.14em;margin-top:6px}
+.tagline{font-size:1.15rem;max-width:22ch;color:var(--ink)}
+
+/* Results */
+.chart-box{position:relative;height:270px}
+.chart-box.tall{height:300px}
+.chart-box.short{height:230px}
+.score-list{display:flex;flex-direction:column}
+.score{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.score:first-child{border-top:0}
+.score .ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:1.2rem;background:var(--sunk)}
+.score .name{font-weight:700}
+.score .pct{font-family:var(--f-display);font-weight:800;font-size:1.4rem;font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:700;padding:3px 10px;border-radius:999px;margin-top:2px}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.mid{background:var(--mid-bg);color:var(--mid)} .pill.low{background:var(--low-bg);color:var(--low)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;color:var(--muted)}
+
+/* Rec + challenge */
+.rec{background:var(--primary);color:var(--primary-ink);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:12px}
+.rec .eyebrow{color:inherit;opacity:.8}
+.rec .btn{background:var(--accent);color:var(--accent-ink)}
+.btn.big{box-shadow:inset 0 -3px 0 var(--accent)}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.75rem;font-weight:600;color:var(--muted)}
+.day b{width:100%;aspect-ratio:1;max-width:44px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-size:.95rem}
+.day.done b{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+.day.today b{border-color:var(--primary);border-width:2.5px}
+.day[disabled]{opacity:.4;cursor:default}
+.tips{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.tips li{display:grid;grid-template-columns:28px 1fr;gap:8px;background:var(--sunk);padding:12px;border-radius:14px}
+.tips li span{font-weight:800;color:var(--primary);font-family:var(--f-display)}
+.trend{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.trend:first-child{border-top:0}
+.trend .arrow{font-family:var(--f-display);font-weight:800;font-size:1.3rem;width:34px;height:34px;border-radius:10px;display:grid;place-items:center}
+.arrow.up{background:var(--ok-bg);color:var(--ok)} .arrow.eq{background:var(--mid-bg);color:var(--mid)} .arrow.down{background:var(--low-bg);color:var(--low)}
+.trend .vals{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem;text-align:right}
+.empty{border:1.5px dashed var(--line);border-radius:var(--r);padding:22px;text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;color:var(--muted)}
+.empty strong{color:var(--ink)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:.95rem}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:700;text-align:right}
+.notice{background:var(--ok-bg);color:var(--ink);border-radius:14px;padding:14px;display:flex;gap:10px;align-items:flex-start}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:999px;font-weight:700;font-size:.92rem;z-index:30;max-width:calc(100% - 32px);text-align:center}
+
+/* Nav */
+nav.bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+nav.bar .in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.bar button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 2px 10px;font-size:.72rem;font-weight:600;color:var(--muted);position:relative}
+nav.bar button .e{font-size:1.25rem;line-height:1.2;filter:grayscale(.7);opacity:.75}
+nav.bar button[aria-current="page"]{color:var(--primary)}
+nav.bar button[aria-current="page"] .e{filter:none;opacity:1}
+nav.bar button[aria-current="page"]::before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
+nav.bar .dot{position:absolute;top:7px;right:calc(50% - 18px);width:8px;height:8px;border-radius:50%;background:var(--low)}
+</style>
+
+</head>
+<body>
+<div id="view" class="app"></div>
+<nav class="bar" id="nav" hidden aria-label="Navegación principal"><div class="in">
+  <button data-act="tab" data-v="inicio"><span class="e">🏠</span>Inicio</button>
+  <button data-act="tab" data-v="evaluacion"><span class="e">📋</span>Evaluación</button>
+  <button data-act="tab" data-v="evolucion"><span class="e">📈</span>Mi evolución</button>
+  <button data-act="tab" data-v="retos"><span class="e">🎯</span>Mis retos</button>
+  <button data-act="tab" data-v="perfil"><span class="e">👤</span>Perfil</button>
+</div></nav>
+
+<script>
+/* ---------- Datos y almacenamiento (solo en este dispositivo) ---------- */
+const KEY='uan-vital-360-v1';
+/* Pega aquí la URL de tu aplicación web de Google Apps Script (termina en /exec) */
+const SHEETS_URL='https://script.google.com/macros/s/AKfycbzj4awZ8Ri7G8XM9QwsDX-yDpcv3LSy4ZDM1VEmePHzkgqRcw6xPY1E81OuwRCy7ykW/exec';
+const sheetsOn=()=>/^https:\/\/script\.google\.com\/.+\/exec/.test(SHEETS_URL);
+const blank=()=>({profile:null,assessments:[],checkins:[],challenge:null,uid:null,consent:null,queue:[],lastSync:null});
+let S=load();
+function load(){try{const r=localStorage.getItem(KEY);if(r){const o=JSON.parse(r);return Object.assign(blank(),o);}}catch(e){}return blank();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c);};
+const today=()=>ymd(new Date());
+const addDays=(s,n)=>{const d=parse(s);d.setDate(d.getDate()+n);return ymd(d);};
+const diff=(a,b)=>Math.round((parse(b)-parse(a))/864e5);
+const fmt=(s,o)=>parse(s).toLocaleDateString('es-CO',o||{day:'numeric',month:'short'});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const AREAS=[
+ {k:'mental',e:'🧠',n:'Bienestar mental',s:'Mental',c:'--c-mental'},
+ {k:'fisico',e:'🏃',n:'Bienestar físico',s:'Físico',c:'--c-fisico'},
+ {k:'habitos',e:'🥗',n:'Hábitos saludables',s:'Hábitos saludables',c:'--c-habitos'},
+ {k:'descanso',e:'😴',n:'Descanso',s:'Descanso',c:'--c-descanso'}];
+
+const PROFILE=[
+ {k:'edad',l:'Edad',o:['18 a 25','26 a 35','36 a 45','46 a 55','56 o más']},
+ {k:'area',l:'Área de trabajo',o:['Docencia','Administrativa','Investigación','Bienestar / Salud','Tecnología','Servicios generales','Estudiante','Otra']},
+ {k:'horario',l:'Horario laboral',o:['Diurno','Mixto','Nocturno','Por turnos','Flexible / remoto']},
+ {k:'sueno',l:'Horas de sueño',o:['Menos de 5','5 a 6','7 a 8','Más de 8']},
+ {k:'actividad',l:'Actividad física',o:['Ninguna','1 a 2 días por semana','3 a 4 días por semana','5 días o más']},
+ {k:'alimentacion',l:'Alimentación',o:['Balanceada','Regular','Poco saludable']},
+ {k:'hidratacion',l:'Hidratación al día',o:['Menos de 1 litro','1 a 2 litros','Más de 2 litros']},
+ {k:'estres',l:'Manejo del estrés',o:['Lo manejo bien','A veces me cuesta','Me cuesta bastante']}];
+
+const VQ={
+ mental:['Me siento con energía y buen ánimo durante mi jornada.','Manejo la presión del trabajo con calma.','Dedico tiempo a actividades que disfruto.'],
+ fisico:['Realizo al menos 30 minutos de actividad física.','Hago pausas activas durante la jornada.','Me siento con buena condición física para mis tareas.'],
+ habitos:['Consumo frutas y verduras a diario.','Tomo suficiente agua durante el día.','Mantengo horarios regulares de comida.'],
+ descanso:['Duermo entre 7 y 8 horas.','Me despierto sintiéndome descansado(a).','Me desconecto del trabajo antes de dormir.']};
+const QL={
+ mental:['Energía y buen ánimo','Maneja la presión con calma','Tiempo para actividades que disfruta'],
+ fisico:['30 min de actividad física','Pausas activas en la jornada','Buena condición física'],
+ habitos:['Frutas y verduras a diario','Suficiente agua','Horarios regulares de comida'],
+ descanso:['Duerme 7 a 8 horas','Despierta descansado(a)','Se desconecta antes de dormir']};
+const FREQ=['Siempre','Frecuentemente','Algunas veces','Nunca'];
+const PTS=[100,75,50,25];
+
+const CI=[
+ {k:'descanso',e:'😴',q:'¿Cómo estuvo tu descanso?',o:['Muy bien','Bien','Regular','Mal'],n:'Sueño',c:'--c-descanso'},
+ {k:'actividad',e:'🏃',q:'¿Tuviste actividad física?',o:['Sí, varios días','Sí, un día','Muy poca','No'],n:'Actividad física',c:'--c-fisico'},
+ {k:'alimentacion',e:'🥗',q:'¿Cómo fue tu alimentación?',o:['Muy saludable','Saludable','Regular','Poco saludable'],n:'Alimentación',c:'--c-habitos'},
+ {k:'agua',e:'💧',q:'¿Tomaste suficiente agua?',o:['Sí, suficiente','Casi suficiente','Poca','Muy poca'],n:'Hidratación',c:'--c-agua'},
+ {k:'estres',e:'🧠',q:'¿Cómo manejaste el estrés?',o:['Muy bien','Bien','Me costó un poco','Me costó mucho'],n:'Manejo del estrés',c:'--c-mental'},
+ {k:'pausa',e:'🌿',q:'¿Tuviste momentos de pausa durante tu jornada?',o:['Sí, varios','Sí, alguno','Casi ninguno','No'],n:'Pausas',c:'--primary'}];
+
+const REC={
+ descanso:{t:'😴 Cuida tu descanso',p:'Intenta mantener horarios regulares de sueño y crear un espacio tranquilo para descansar.',
+  tips:['Acuéstate y levántate a la misma hora, también el fin de semana.','Deja las pantallas 30 minutos antes de dormir.','Mantén la habitación oscura, fresca y en silencio.','Evita café y bebidas energéticas después de las 3 p. m.']},
+ mental:{t:'🧠 Cuida tu mente',p:'Pequeñas pausas para respirar y ordenar el día ayudan a bajar la presión de la jornada.',
+  tips:['Respira 4 segundos, sostén 4 y suelta en 6. Repite 5 veces.','Divide las tareas grandes en pasos cortos y marca cada avance.','Habla con alguien de confianza cuando sientas carga acumulada.','Acércate al área de bienestar de tu institución si lo necesitas.']},
+ fisico:{t:'🏃 Muévete más',p:'Moverte unos minutos varias veces al día suma tanto como una sesión larga de ejercicio.',
+  tips:['Haz una pausa activa de 5 minutos cada 2 horas.','Usa las escaleras en lugar del ascensor.','Camina 20 minutos al día, puede ser en dos partes.','Estira cuello, hombros y espalda al terminar la jornada.']},
+ habitos:{t:'🥗 Nutre tu jornada',p:'Comer a horas regulares y tener agua a la mano facilita mantener la energía todo el día.',
+  tips:['Ten una botella de agua visible en tu puesto.','Incluye una fruta a media mañana y otra a media tarde.','Respeta tu hora de almuerzo lejos del computador.','Agrega una porción de verduras a cada comida principal.']}};
+
+const CHAL={
+ fisico:['🏃 Realiza una pausa activa durante tu jornada.','🚶 Camina 20 minutos durante el día.'],
+ mental:['🧠 Dedica 5 minutos a respirar con calma.','📝 Escribe una cosa buena de tu día.'],
+ habitos:['💧 Toma 8 vasos de agua durante el día.','🍎 Come una fruta a media mañana.'],
+ descanso:['😴 Acuéstate a la misma hora cada noche.','📵 Deja el celular 30 minutos antes de dormir.']};
+
+/* ---------- Cálculos ---------- */
+const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
+const lastA=()=>S.assessments[S.assessments.length-1]||null;
+const lastC=()=>S.checkins[S.checkins.length-1]||null;
+const monthCI=()=>{const since=addDays(today(),-30);return S.checkins.filter(c=>c.date>=since);};
+function monthScores(){
+  const a=lastA(); if(!a) return null;
+  const cs=monthCI().filter(c=>c.date>=addDays(a.date,-1)); if(!cs.length) return {...a.scores};
+  const m=k=>avg(cs.map(c=>c.v[k]));
+  const ci={mental:(m('estres')+m('pausa'))/2,fisico:m('actividad'),habitos:(m('alimentacion')+m('agua'))/2,descanso:m('descanso')};
+  const o={};AREAS.forEach(({k})=>o[k]=Math.round(a.scores[k]*.5+ci[k]*.5));return o;
+}
+function status(p){return p>=70?{e:'🟢',t:'Favorable',c:'ok'}:p>=55?{e:'🔵',t:'Fortalece este hábito',c:'mid'}:{e:'🟡',t:'Puede mejorar',c:'low'};}
+function focusArea(){const s=monthScores();if(!s)return null;return AREAS.map(a=>a.k).sort((x,y)=>s[x]-s[y])[0];}
+const ciDue=()=>{const c=lastC();return !c||diff(c.date,today())>=2;};
+const nextCI=()=>{const c=lastC();return c?addDays(c.date,2):today();};
+function weekStart(){const d=new Date();d.setDate(d.getDate()-((d.getDay()+6)%7));return ymd(d);}
+function ensureChallenge(){const ws=weekStart();if(!S.challenge||S.challenge.week!==ws){S.challenge={week:ws,area:focusArea()||'fisico',idx:0,done:[]};save();}}
+
+/* ---------- Envío a Google Sheets (una fila por usuario + una fila por check-in) ---------- */
+const nowStr=()=>{const d=new Date();return ymd(d)+' '+pad(d.getHours())+':'+pad(d.getMinutes());};
+function userRow(){
+ const p=S.profile||{},a=lastA(),m=monthScores(),r={};
+ r['ID usuario']=S.uid; r['Fecha registro']=S.consent||''; r['Última actualización']=nowStr(); r['Autoriza tratamiento de datos']='Sí';
+ PROFILE.forEach(x=>r[x.l]=p[x.k]||'');
+ r['Fecha valoración']=a?a.date:'';
+ AREAS.forEach(ar=>QL[ar.k].forEach((l,i)=>{const j=a&&a.answers?a.answers[ar.k+i]:null;r[`${ar.s} ${i+1}: ${l}`]=j!=null?FREQ[j]:'';}));
+ AREAS.forEach(ar=>r[`Puntaje ${ar.s.toLowerCase()} (%)`]=a?a.scores[ar.k]:'');
+ r['Puntaje general (%)']=a?Math.round(avg(AREAS.map(x=>a.scores[x.k]))):'';
+ AREAS.forEach(ar=>r[`Bienestar del mes ${ar.s.toLowerCase()} (%)`]=m?m[ar.k]:'');
+ const f=focusArea(); r['Área a fortalecer']=f?AREAS.find(x=>x.k===f).n:'';
+ r['Total check-ins']=S.checkins.length; r['Último check-in']=lastC()?lastC().date:'';
+ r['Reto de la semana']=S.challenge?CHAL[S.challenge.area][S.challenge.idx].replace(/^\S+\s/,''):'';
+ r['Días reto completados']=S.challenge?S.challenge.done.length:'';
+ return r;}
+function ciRow(c){
+ const r={'ID registro':S.uid+'-'+c.date,'ID usuario':S.uid,'Fecha':c.date,'Hora de envío':nowStr(),'Área de trabajo':(S.profile||{}).area||''};
+ CI.forEach(q=>{const j=PTS.indexOf(c.v[q.k]);r[q.n+' (respuesta)']=j>-1?q.o[j]:'';r[q.n+' (%)']=c.v[q.k];});
+ r['Promedio check-in (%)']=Math.round(avg(CI.map(q=>c.v[q.k])));return r;}
+function sync(ci){
+ if(!S.uid)return;
+ S.queue=(S.queue||[]).filter(it=>it.checkin);
+ const it={user:userRow()}; if(ci)it.checkin=ciRow(ci);
+ S.queue.push(it); save(); flush();}
+let flushing=false;
+async function flush(){
+ if(flushing||!S.queue||!S.queue.length||!sheetsOn())return; flushing=true;
+ try{while(S.queue.length){await fetch(SHEETS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(S.queue[0])});S.queue.shift();S.lastSync=nowStr();save();}}catch(e){}
+ flushing=false; if(!flow&&tab==='perfil')render();}
+window.addEventListener('online',flush);
+
+/* ---------- Estado de la interfaz ---------- */
+let flow='splash', tab='inicio', pDraft={}, pErr='', vStep=0, vDraft={}, ciDraft={}, ciAgain=false, metric='todas', recArea=null, confirmReset=false, afterProfile='valoracion';
+const $=s=>document.querySelector(s);
+let charts=[];
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ---------- Piezas ---------- */
+function logo(size){return `<svg class="logo" viewBox="0 0 120 120" ${size?`width="${size}" height="${size}"`:''} aria-hidden="true">
+${AREAS.map((a,i)=>`<circle cx="60" cy="60" r="44" fill="none" stroke="var(${a.c})" stroke-width="12" stroke-linecap="round" stroke-dasharray="54 276.5" transform="rotate(${-84+i*90} 60 60)"/>`).join('')}
+<text x="60" y="67" text-anchor="middle" font-family="Bricolage Grotesque, sans-serif" font-weight="800" font-size="22" fill="var(--ink)">360°</text></svg>`;}
+const brand=()=>`<div class="brand">${logo()}<span>UAN VITAL 360°</span></div>`;
+const ICONS={
+ moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" stroke="var(--c-descanso)"/>',
+ drop:'<path d="M12 3c-3.5 5-6 8-6 11a6 6 0 0 0 12 0c0-3-2.5-6-6-11z" stroke="var(--c-agua)"/>',
+ leaf:'<path d="M5 19c0-9 6-14 15-14 0 9-6 14-15 14z M5 19l7-7" stroke="var(--c-habitos)"/>',
+ pulse:'<path d="M3 12h4l2-5 4 10 2-5h6" stroke="var(--c-fisico)"/>'};
+const ico=k=>`<svg viewBox="0 0 24 24">${ICONS[k]}</svg>`;
+
+function scoreRows(s){return `<div class="score-list">${AREAS.map(a=>{const st=status(s[a.k]);return `<div class="score"><div class="ico">${a.e}</div><div><div class="name">${a.n}</div><span class="pill ${st.c}">${st.e} ${st.t}</span></div><div class="pct">${s[a.k]}%</div></div>`;}).join('')}</div>
+<div class="legend"><span>🟢 Favorable</span><span>🔵 Fortalece este hábito</span><span>🟡 Puede mejorar</span></div>`;}
+
+function recCard(){const f=focusArea();if(!f)return '';const r=REC[f];return `<section class="rec"><div class="eyebrow">Tu hábito para fortalecer</div><h2>${r.t}</h2><p>${r.p}</p><button class="btn" data-act="rec" data-v="${f}">Ver recomendaciones</button></section>`;}
+
+function challengeCard(full){ensureChallenge();const ch=S.challenge,t=today();const ds=[...Array(7)].map((_,i)=>addDays(ch.week,i));const n=ch.done.length;
+ const L=['L','M','M','J','V','S','D'];
+ return `<section class="card"><div class="row between"><h3>Mi reto de esta semana</h3>${full?'':`<button class="link" data-act="tab" data-v="retos">Ver</button>`}</div>
+ <p style="font-size:1.1rem;font-weight:600">${CHAL[ch.area][ch.idx]}</p>
+ <div class="stack" style="gap:6px"><div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="7" aria-valuenow="${n}"><i style="width:${n/7*100}%"></i></div><div class="row between"><span class="muted">${n}/7 días completados</span>${n>=7?'<span class="pill ok">🎉 Reto cumplido</span>':''}</div></div>
+ ${full?`<div class="days">${ds.map((d,i)=>`<button class="day ${ch.done.includes(d)?'done':''} ${d===t?'today':''}" data-act="day" data-v="${d}" ${d>t?'disabled':''} aria-pressed="${ch.done.includes(d)}" aria-label="${fmt(d,{weekday:'long',day:'numeric'})}"><b>${ch.done.includes(d)?'✓':parse(d).getDate()}</b>${L[i]}</button>`).join('')}</div>
+ <p class="muted" style="font-size:.9rem">Toca hoy o un día anterior de esta semana para marcarlo como cumplido.</p>
+ <button class="btn ghost small" data-act="chchange">Cambiar reto</button>`:''}</section>`;}
+
+/* ---------- Pantallas de recorrido ---------- */
+const FLOW={
+ splash:()=>`<section class="splash">
+  <div class="art">${logo()}<span class="float f1">${ico('moon')}</span><span class="float f2">${ico('pulse')}</span><span class="float f3">${ico('leaf')}</span><span class="float f4">${ico('drop')}</span></div>
+  <h1>UAN VITAL 360°<small>BIENESTAR EN LA JORNADA</small></h1>
+  <p class="tagline">Tu bienestar también hace parte de tu jornada.</p>
+  <button class="btn big" data-act="start" style="max-width:320px">Comenzar</button>
+  <p class="muted" style="font-size:.82rem;max-width:32ch">Tus respuestas se registran de forma anónima.</p></section>`,
+
+ perfil:()=>{const done=PROFILE.filter(p=>pDraft[p.k]).length;return `<div class="top">${brand()}<span class="muted" style="font-size:.85rem">${done}/${PROFILE.length}</span></div>
+ <div class="stack"><div class="eyebrow">Paso 1 de 2</div><h1>Conozcamos tus hábitos</h1><p class="muted">Elige la opción que mejor te describe. Te toma menos de un minuto.</p></div>
+ ${S.consent?'':`<button class="consent" data-act="consent" aria-pressed="${!!pDraft.consent}"><span class="box" aria-hidden="true">${pDraft.consent?'✓':''}</span><span>Autorizo el tratamiento de mis datos de forma anónima, con fines de bienestar e investigación, según la Ley 1581 de 2012. Mis respuestas se identifican solo con un código, no con mi nombre.</span></button>`}
+ <div class="field"><label for="nombre">¿Cómo te llamamos? <span class="muted" style="font-weight:500">(opcional)</span></label><input id="nombre" type="text" maxlength="30" autocomplete="given-name" value="${esc(pDraft.nombre||'')}" placeholder="Tu nombre"></div>
+ ${PROFILE.map(p=>`<section class="card"><div class="lbl" style="font-weight:700">${p.l}</div><div class="chips">${p.o.map(o=>`<button class="chip" data-act="pick" data-g="${p.k}" data-v="${esc(o)}" aria-pressed="${pDraft[p.k]===o}">${o}</button>`).join('')}</div></section>`).join('')}
+ ${pErr?`<p class="err">${pErr}</p>`:''}
+ <button class="btn big" data-act="pnext">${afterProfile==='valoracion'?'Continuar a la valoración':'Guardar cambios'}</button>`;},
+
+ valoracion:()=>{const a=AREAS[vStep];const answered=VQ[a.k].filter((_,i)=>vDraft[a.k+i]!=null).length;const ok=answered===3;
+ return `<div class="top">${brand()}<span class="muted" style="font-size:.85rem">Área ${vStep+1} de 4</span></div>
+ <div class="steps">${AREAS.map((_,i)=>`<span class="${i<=vStep?'on':''}"></span>`).join('')}</div>
+ <div class="stack"><div class="eyebrow">${afterProfile==='valoracion'?'Paso 2 de 2 · ':''}Valoración inicial</div><h1>Tu bienestar 360°</h1></div>
+ <section class="card"><h2>${a.e} ${a.n}</h2>
+ ${VQ[a.k].map((q,i)=>`<div class="q"><p class="q-title">${q}</p><div class="opts">${FREQ.map((f,j)=>`<button class="chip" data-act="ans" data-g="${a.k+i}" data-v="${j}" aria-pressed="${vDraft[a.k+i]===j}">${f}</button>`).join('')}</div></div>`).join('')}
+ </section>
+ <div class="row">${vStep>0?`<button class="btn ghost" data-act="vprev" style="width:40%">Atrás</button>`:''}<button class="btn big" data-act="vnext" ${ok?'':'disabled'}>${vStep<3?'Siguiente área':'Ver mi resultado'}</button></div>
+ ${ok?'':`<p class="muted" style="text-align:center;font-size:.9rem">Responde las 3 preguntas para continuar.</p>`}`;},
+
+ resultado:()=>{const s=monthScores();return `<div class="top">${brand()}</div>
+ <div class="stack"><div class="eyebrow">Resultado</div><h1>Tu bienestar este mes</h1><p class="muted">Calculado con tus respuestas de hoy. Se irá actualizando con cada check-in.</p></div>
+ <section class="card"><div class="chart-box"><canvas data-chart="areas" aria-label="Gráfico de barras de tus cuatro áreas de bienestar"></canvas></div>${scoreRows(s)}</section>
+ ${recCard()}
+ <button class="btn big" data-act="home">Ir a mi inicio</button>`;}
+};
+
+/* ---------- Pestañas ---------- */
+function needAssessment(){return `<div class="empty"><span style="font-size:2rem">📋</span><strong>Aún no tienes tu valoración inicial</strong><p>Responde 12 preguntas cortas y verás tu gráfico real.</p><button class="btn small" data-act="vredo">Hacer valoración</button></div>`;}
+
+function checkinBlock(){
+ const due=ciDue()||ciAgain;const c=lastC();
+ if(!due) return `<section class="card"><div class="notice"><span style="font-size:1.4rem">✅</span><div><strong>Registraste tu bienestar el ${fmt(c.date,{weekday:'long',day:'numeric',month:'long'})}.</strong><p class="muted">Tu próximo check-in es el ${fmt(nextCI(),{weekday:'long',day:'numeric',month:'long'})}.</p></div></div><button class="btn ghost" data-act="ciagain">Registrar de nuevo</button></section>`;
+ const all=CI.every(q=>ciDraft[q.k]!=null);
+ return `<section class="card"><div class="stack"><h2>¿Cómo estás hoy?</h2><p class="muted">Tómate un minuto para registrar cómo ha estado tu bienestar durante los últimos 2 días.</p></div>
+ ${CI.map(q=>`<div class="q"><p class="q-title">${q.e} ${q.q}</p><div class="opts">${q.o.map((o,j)=>`<button class="chip" data-act="ci" data-g="${q.k}" data-v="${j}" aria-pressed="${ciDraft[q.k]===j}">${o}</button>`).join('')}</div></div>`).join('')}
+ <button class="btn big" data-act="cisave" ${all?'':'disabled'}>Registrar mi bienestar</button>
+ ${all?'':`<p class="muted" style="text-align:center;font-size:.9rem">${CI.filter(q=>ciDraft[q.k]!=null).length} de 6 respondidas</p>`}</section>`;}
+
+function balanceBlock(){
+ const cs=monthCI();
+ if(cs.length<2) return `<div class="empty"><span style="font-size:2rem">⚖️</span><strong>Tu balance aparece desde el segundo check-in</strong><p>Llevas ${cs.length} de 2. Compara cómo empezaste y cómo vas.</p></div>`;
+ const k=cs.length>=4?2:1, first=cs.slice(0,k), last=cs.slice(-k);
+ const rows=[['descanso','😴','Sueño'],['actividad','🏃','Movimiento'],['alimentacion','🥗','Alimentación'],['agua','💧','Hidratación'],['estres','🧠','Manejo del estrés']].map(([key,e,n])=>{
+  const a=Math.round(avg(first.map(c=>c.v[key]))),b=Math.round(avg(last.map(c=>c.v[key]))),d=b-a;
+  const t=d>=8?['up','↑','Mejoró']:d<=-8?['down','↓','Bajó']:['eq','→','Estable'];
+  return `<div class="trend"><span class="arrow ${t[0]}">${t[1]}</span><div><div style="font-weight:700">${e} ${n}</div><div class="muted" style="font-size:.9rem">${t[2]}</div></div><div class="vals">${a}% → <strong style="color:var(--ink)">${b}%</strong></div></div>`;}).join('');
+ return `<section class="card"><div class="stack"><h2>Tu balance de bienestar</h2><p class="muted">Así evolucionaron tus hábitos durante este mes.</p><p class="muted" style="font-size:.85rem">Inicio: ${fmt(cs[0].date)} · Último registro: ${fmt(cs[cs.length-1].date)}</p></div><div>${rows}</div></section>`;}
+
+const TABS={
+ inicio:()=>{const s=monthScores();const n=S.profile&&S.profile.nombre;return `<div class="top">${brand()}<span class="muted" style="font-size:.85rem">${fmt(today(),{weekday:'short',day:'numeric',month:'short'})}</span></div>
+ <div class="stack" style="gap:4px"><h1>${n?`Hola, ${esc(n)}`:'Hola'}</h1><p class="muted">Tu bienestar también hace parte de tu jornada.</p></div>
+ ${!s?needAssessment():`<section class="card"><h2>Tu bienestar este mes</h2><div class="chart-box short"><canvas data-chart="areas" aria-label="Gráfico de barras de tus cuatro áreas"></canvas></div>${scoreRows(s)}</section>`}
+ <section class="card"><div class="row between"><div><h3>¿Cómo estás hoy?</h3><p class="muted" style="font-size:.92rem">${ciDue()?'Es momento de tu check-in.':'Próximo check-in: '+fmt(nextCI(),{weekday:'long',day:'numeric'})}</p></div><span style="font-size:1.8rem">${ciDue()?'🌿':'✅'}</span></div>${ciDue()?`<button class="btn" data-act="tab" data-v="evaluacion">Registrar mi bienestar</button>`:''}</section>
+ ${recCard()}
+ ${s?challengeCard(false):''}`;},
+
+ evaluacion:()=>{const a=lastA();return `<div class="top">${brand()}</div>
+ ${checkinBlock()}
+ <section class="card"><div class="row between"><div><h3>Valoración 360°</h3><p class="muted" style="font-size:.92rem">${a?'Última: '+fmt(a.date,{day:'numeric',month:'long'}):'Pendiente'}</p></div><span style="font-size:1.6rem">📋</span></div><p class="muted" style="font-size:.92rem">Repítela al inicio de cada mes para actualizar tu punto de partida.</p><button class="btn ghost" data-act="vredo">${a?'Repetir valoración':'Hacer valoración'}</button></section>`;},
+
+ evolucion:()=>{const cs=monthCI();return `<div class="top">${brand()}</div>
+ <div class="stack" style="gap:4px"><h1>Mi evolución</h1><p class="muted">Tus registros de los últimos 30 días.</p></div>
+ ${!cs.length?`<div class="empty"><span style="font-size:2rem">📈</span><strong>Tu primer check-in dibuja estos gráficos</strong><p>Cada registro suma un punto. Haz uno cada 2 días.</p><button class="btn small" data-act="tab" data-v="evaluacion">Hacer check-in</button></div>`:`
+ <section class="card"><h3>Cómo cambió cada hábito</h3><div class="chips">${[['todas','Todos'],...CI.slice(0,5).map(q=>[q.k,q.n])].map(([k,l])=>`<button class="chip sm" data-act="metric" data-v="${k}" aria-pressed="${metric===k}">${l}</button>`).join('')}</div><div class="chart-box tall"><canvas data-chart="line" aria-label="Gráfico de líneas de tus hábitos por fecha"></canvas></div></section>
+ <section class="card"><h3>Promedio del mes</h3><div class="chart-box short"><canvas data-chart="bar" aria-label="Gráfico de barras con el promedio de cada hábito"></canvas></div><p class="muted" style="font-size:.85rem">${cs.length} ${cs.length===1?'registro':'registros'} este mes</p></section>`}
+ ${balanceBlock()}`;},
+
+ retos:()=>{const f=recArea||focusArea()||'fisico';const r=REC[f];return `<div class="top">${brand()}</div>
+ <h1>Mis retos</h1>
+ ${challengeCard(true)}
+ <section class="card" id="recs"><h2>Recomendaciones</h2><div class="chips">${AREAS.map(a=>`<button class="chip sm" data-act="recarea" data-v="${a.k}" aria-pressed="${f===a.k}">${a.e} ${a.s}</button>`).join('')}</div>
+ <h3>${r.t}${f===focusArea()?' <span class="pill mid">Tu prioridad</span>':''}</h3><p class="muted">${r.p}</p>
+ <ol class="tips">${r.tips.map((t,i)=>`<li><span>${i+1}</span><p>${t}</p></li>`).join('')}</ol></section>`;},
+
+ perfil:()=>{const p=S.profile||{};return `<div class="top">${brand()}</div>
+ <h1>${p.nombre?esc(p.nombre):'Mi perfil'}</h1>
+ <section class="card"><h3>Mis hábitos</h3><dl class="kv">${PROFILE.map(x=>`<dt>${x.l}</dt><dd>${esc(p[x.k]||'—')}</dd>`).join('')}</dl><button class="btn ghost" data-act="pedit">Editar mis hábitos</button></section>
+ <section class="card"><h3>Mis registros</h3><dl class="kv"><dt>Valoraciones</dt><dd>${S.assessments.length}</dd><dt>Check-ins</dt><dd>${S.checkins.length}</dd></dl>
+ <dl class="kv"><dt>Tu código</dt><dd>${S.uid||'—'}</dd><dt>Envío a la base de datos</dt><dd>${!sheetsOn()?'Sin conectar':S.queue&&S.queue.length?S.queue.length+' pendiente(s)':'Al día ✓'}</dd></dl>
+ <p class="muted" style="font-size:.9rem">Tus respuestas se guardan en este dispositivo y se envían a la base de datos del programa solo con tu código, sin tu nombre. Borrar aquí no elimina lo ya enviado; para eso, comparte tu código con el administrador.</p>
+ ${confirmReset?`<p class="err">Se borrarán tu perfil, valoraciones, check-ins y retos. Esta acción no se puede deshacer.</p><div class="row"><button class="btn ghost" data-act="rcancel">Cancelar</button><button class="btn" data-act="rconfirm" style="background:var(--accent);color:var(--accent-ink)">Borrar todo</button></div>`:`<button class="btn ghost" data-act="reset">Borrar mis datos</button>`}</section>
+ <button class="link" data-act="splash" style="align-self:center">Ver pantalla de inicio</button>`;}
+};
+
+/* ---------- Gráficos ---------- */
+function drawCharts(){
+ if(!window.Chart){document.querySelectorAll('canvas[data-chart]').forEach(c=>{c.parentElement.innerHTML='<p class="muted">No se pudo cargar el gráfico. Revisa tu conexión.</p>';});return;}
+ Chart.defaults.font.family=getComputedStyle(document.body).fontFamily;Chart.defaults.color=css('--muted');
+ const ink=css('--ink'),line=css('--line');
+ document.querySelectorAll('canvas[data-chart]').forEach(cv=>{const t=cv.dataset.chart;
+  if(t==='radar'){const s=monthScores();charts.push(new Chart(cv,{type:'radar',data:{labels:AREAS.map(a=>[a.e,a.s]),datasets:[{data:AREAS.map(a=>s[a.k]),backgroundColor:css('--primary-soft'),borderColor:css('--primary'),borderWidth:2.5,pointBackgroundColor:AREAS.map(a=>css(a.c)),pointBorderColor:css('--surface'),pointBorderWidth:2,pointRadius:6}]},
+   options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},scales:{r:{min:0,max:100,ticks:{stepSize:25,display:false},grid:{color:line},angleLines:{color:line},pointLabels:{color:ink,font:{size:12,weight:'600'}}}}}}));}
+  if(t==='areas'){const s=monthScores();const ff=getComputedStyle(document.body).fontFamily;
+   const vl={id:'vl',afterDatasetsDraw(ch){const x=ch.ctx;x.save();x.fillStyle=ink;x.font='700 14px '+ff;x.textAlign='center';ch.getDatasetMeta(0).data.forEach((b,i)=>x.fillText(ch.data.datasets[0].data[i]+'%',b.x,b.y-8));x.restore();}};
+   charts.push(new Chart(cv,{type:'bar',data:{labels:AREAS.map(a=>[a.e,a.s.replace(' saludables','')]),datasets:[{data:AREAS.map(a=>s[a.k]),backgroundColor:AREAS.map(a=>css(a.c)),borderRadius:10,maxBarThickness:52}]},
+   options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},scales:{y:{min:0,max:100,ticks:{stepSize:25,callback:v=>v+'%'},grid:{color:line}},x:{grid:{display:false},ticks:{color:ink,font:{size:12,weight:'600'}}}}},plugins:[vl]}));}
+  if(t==='line'){const cs=monthCI();const qs=CI.slice(0,5).filter(q=>metric==='todas'||q.k===metric);
+   charts.push(new Chart(cv,{type:'line',data:{labels:cs.map(c=>fmt(c.date)),datasets:qs.map(q=>({label:q.n,data:cs.map(c=>c.v[q.k]),borderColor:css(q.c),backgroundColor:css(q.c),tension:.35,borderWidth:metric==='todas'?2:3,pointRadius:4,fill:false}))},
+   options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:metric==='todas',position:'bottom',labels:{boxWidth:10,boxHeight:10,usePointStyle:true,color:ink}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}%`}}},
+   scales:{y:{min:0,max:100,ticks:{stepSize:25,callback:v=>v+'%'},grid:{color:line}},x:{grid:{display:false}}}}}));}
+  if(t==='bar'){const cs=monthCI();const qs=CI.slice(0,5);
+   charts.push(new Chart(cv,{type:'bar',data:{labels:qs.map(q=>q.n),datasets:[{data:qs.map(q=>Math.round(avg(cs.map(c=>c.v[q.k])))),backgroundColor:qs.map(q=>css(q.c)),borderRadius:8,barThickness:22}]},
+   options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},scales:{x:{min:0,max:100,ticks:{stepSize:25,callback:v=>v+'%'},grid:{color:line}},y:{grid:{display:false},ticks:{color:ink}}}}}));}
+ });}
+
+/* ---------- Render ---------- */
+function render(top){
+ charts.forEach(c=>c.destroy());charts=[];
+ const v=$('#view');v.classList.toggle('flow',!!flow);$('#nav').hidden=!!flow;
+ v.innerHTML=flow?FLOW[flow]():TABS[tab]();
+ document.querySelectorAll('nav.bar button').forEach(b=>{b.setAttribute('aria-current',b.dataset.v===tab?'page':'false');b.querySelector('.dot')?.remove();if(b.dataset.v==='evaluacion'&&ciDue()&&lastA())b.insertAdjacentHTML('beforeend','<span class="dot" aria-label="Check-in pendiente"></span>');});
+ drawCharts();
+ if(top)window.scrollTo(0,0);
+}
+function toast(m){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2400);}
+
+document.addEventListener('input',e=>{if(e.target.id==='nombre')pDraft.nombre=e.target.value.trim();});
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const a=b.dataset.act,g=b.dataset.g,val=b.dataset.v;
+ switch(a){
+  case 'start': if(!S.profile){pDraft={};afterProfile='valoracion';flow='perfil';} else if(!lastA()){vStep=0;vDraft={};afterProfile='valoracion';flow='valoracion';} else {flow=null;tab='inicio';} render(true);break;
+  case 'splash': flow='splash';render(true);break;
+  case 'pick': pDraft[g]=val;pErr='';render();break;
+  case 'consent': pDraft.consent=!pDraft.consent;pErr='';render();break;
+  case 'pnext': {const miss=PROFILE.filter(p=>!pDraft[p.k]).map(p=>p.l.toLowerCase());if(!S.consent&&!pDraft.consent)miss.unshift('la autorización de datos');if(miss.length){pErr='Falta: '+miss.join(', ')+'.';render();return;}
+   if(!S.consent)S.consent=nowStr();if(!S.uid)S.uid='UAN-'+Date.now().toString(36).toUpperCase().slice(-4)+Math.random().toString(36).slice(2,6).toUpperCase();
+   const pd={...pDraft};delete pd.consent;S.profile=pd;save();sync();if(afterProfile==='valoracion'){vStep=0;vDraft={};flow='valoracion';}else{flow=null;tab='perfil';toast('Perfil actualizado');}render(true);break;}
+  case 'ans': vDraft[g]=+val;render();break;
+  case 'vprev': vStep--;render(true);break;
+  case 'vnext': if(vStep<3){vStep++;render(true);}else{const sc={};AREAS.forEach(x=>sc[x.k]=Math.round(avg([0,1,2].map(i=>PTS[vDraft[x.k+i]]))));
+   const t=today();S.assessments=S.assessments.filter(x=>x.date!==t);S.assessments.push({date:t,scores:sc,answers:{...vDraft}});save();sync();flow='resultado';render(true);}break;
+  case 'vredo': vStep=0;vDraft={};afterProfile=S.profile?'repeat':'valoracion';if(!S.profile){pDraft={};flow='perfil';}else flow='valoracion';render(true);break;
+  case 'home': flow=null;tab='inicio';render(true);break;
+  case 'tab': flow=null;tab=val;if(val!=='retos')recArea=null;confirmReset=false;render(true);break;
+  case 'ci': ciDraft[g]=+val;render();break;
+  case 'ciagain': ciAgain=true;ciDraft={};render();break;
+  case 'cisave': {const v={};CI.forEach(q=>v[q.k]=PTS[ciDraft[q.k]]);const t=today();S.checkins=S.checkins.filter(c=>c.date!==t);S.checkins.push({date:t,v});S.checkins.sort((x,y)=>x.date<y.date?-1:1);save();sync(lastC());ciDraft={};ciAgain=false;toast('Registrado. Tu próximo check-in es en 2 días.');render(true);break;}
+  case 'rec': flow=null;tab='retos';recArea=val;render();setTimeout(()=>$('#recs')?.scrollIntoView({behavior:'smooth'}),60);break;
+  case 'recarea': recArea=val;render();break;
+  case 'day': {const d=S.challenge.done,i=d.indexOf(val);if(i>-1)d.splice(i,1);else{d.push(val);if(d.length===7)toast('¡Reto cumplido! 🎉');}save();sync();render();break;}
+  case 'chchange': {const ks=AREAS.map(x=>x.k);const ch=S.challenge;if(ch.idx<1)ch.idx++;else{ch.idx=0;ch.area=ks[(ks.indexOf(ch.area)+1)%4];}ch.done=[];save();sync();render();break;}
+  case 'metric': metric=val;render();break;
+  case 'pedit': pDraft={...S.profile};pErr='';afterProfile='edit';flow='perfil';render(true);break;
+  case 'reset': confirmReset=true;render();break;
+  case 'rcancel': confirmReset=false;render();break;
+  case 'rconfirm': S=blank();save();try{localStorage.removeItem(KEY);}catch(x){}confirmReset=false;flow='splash';tab='inicio';render(true);break;
+ }
+});
+// Volver a dibujar si cambia el tema
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>render());}catch(e){}
+new MutationObserver(()=>render()).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+render();flush();
+</script>
+</body>
+</html>
